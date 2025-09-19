@@ -9,6 +9,11 @@ CREATE TABLE tienda (
     direccion VARCHAR(200)
 );
 
+-- Insertar 100 tiendas realistas
+INSERT INTO tienda (nombre, direccion)
+SELECT 'MiniMarket ' || gs, 'Dirección ' || gs
+FROM generate_series(1, 100) AS gs;
+
 -- TELEFONO_TIENDA
 CREATE TABLE telefono_tienda (
     id_telefono_tienda SERIAL PRIMARY KEY,
@@ -29,6 +34,34 @@ CREATE TABLE empleados (
     id_tienda INT NOT NULL,
     FOREIGN KEY (id_tienda) REFERENCES tienda(id_tienda)
 );
+
+-- Insertar 4 empleados por cada tienda (400 en total)
+INSERT INTO empleados (nombre, direccion, fecha_contratacion, cargo, email, salario, id_tienda)
+SELECT 
+  fnombres.nombre || ' ' || fapellidos.apellido,
+  'Dirección Empleado ' || gs,
+  CURRENT_DATE - (random() * 730)::int, -- fecha entre hoy y hace 2 años
+  fcargos.cargo,
+  lower(fnombres.nombre) || '.' || lower(fapellidos.apellido) || gs || '@empleado.com',
+  (1500000 + (random() * 1500000))::numeric(10,2),
+  t.id_tienda
+FROM generate_series(1, 400) AS gs
+JOIN (SELECT id_tienda FROM tienda ORDER BY id_tienda LIMIT 100) AS t ON (gs % 100 + 1) = t.id_tienda
+JOIN (VALUES
+  ('Juan'),('Laura'),('Pedro'),('Sandra'),('María'),('Andrés'),('Paola'),('Javier'),('Carlos'),('Diana'),
+  ('Felipe'),('Natalia'),('Ana'),('Miguel'),('Camila'),('Oscar'),('Luis'),('Valentina'),('Sergio'),('Lucía'),
+  ('David'),('Andrea'),('Martín'),('Gabriela'),('Tomás'),('Patricia'),('Jorge'),('Sara'),('Alejandro'),('Elena'),
+  ('Manuel'),('Mónica'),('Camilo'),('Esteban'),('Sofía'),('Ricardo'),('Emilia'),('Mateo'),('Victoria'),('Simón'),
+  ('Sebastián'),('Emilio'),('Antonia'),('Emilio'),('Isabella'),('Emilio'),('Victoria'),('Simón'),('Antonia'),('Emilia')
+) AS fnombres(nombre) ON (gs % 50 + 1) = row_number() OVER ()
+JOIN (VALUES
+  ('Torres'),('Pérez'),('Gómez'),('Rodríguez'),('Martínez'),('Ramírez'),('Herrera'),('Díaz'),('Castro'),('Peña'),
+  ('Ruiz'),('López'),('Vargas'),('Ríos'),('Suárez'),('Ramírez'),('Torres'),('Díaz'),('Gómez'),('Herrera'),
+  ('Peña'),('Castro'),('Ruiz'),('Gómez'),('Ramírez'),('Vargas'),('Ríos'),('Díaz'),('Torres'),('Ramírez'),('Herrera'),
+  ('Peña'),('Castro'),('Ruiz'),('Gómez'),('Ramírez'),('Vargas'),('Ríos'),('Díaz'),('Torres'),('Ramírez'),('Herrera'),
+  ('Peña'),('Castro'),('Ruiz'),('Gómez'),('Ramírez'),('Vargas'),('Ríos'),('Díaz'),('Torres'),('Ramírez')
+) AS fapellidos(apellido) ON (gs % 50 + 1) = row_number() OVER ()
+JOIN (VALUES ('Cajero'),('Auxiliar'),('Administrador')) AS fcargos(cargo) ON (gs % 3 + 1) = row_number() OVER ()
 
 -- CATEGORIA
 CREATE TABLE categoria (
@@ -90,11 +123,51 @@ CREATE TABLE detalle_venta (
     FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
 );
 
---- CLIENTES
 CREATE TABLE clientes (
     cc_cliente VARCHAR(20) PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(100) UNIQUE
+);
+
+-- Insertar 2000 clientes realistas
+INSERT INTO clientes (cc_cliente, nombre, correo)
+SELECT 
+  (10000000 + gs)::text,
+  fnombres.nombre || ' ' || fapellidos.apellido,
+  lower(fnombres.nombre) || '.' || lower(fapellidos.apellido) || gs || '@mail.com'
+FROM generate_series(1, 2000) AS gs
+JOIN (VALUES
+  ('Camila'),('Juan'),('María'),('Carlos'),('Ana'),('Luis'),('Paula'),('Jorge'),('Sofía'),('Ricardo'),
+  ('Valentina'),('Andrés'),('Gabriela'),('Felipe'),('Laura'),('Tomás'),('Daniela'),('Martín'),('Patricia'),('Oscar'),
+  ('Lucía'),('Esteban'),('Sandra'),('David'),('Camilo'),('Natalia'),('Javier'),('Mónica'),('Alejandro'),('Elena'),
+  ('Sara'),('Manuel'),('Paola'),('Sergio'),('Julián'),('Gabriel'),('Valeria'),('Marcos'),('Andrea'),('Martina'),
+  ('Miguel'),('Diana'),('Sebastián'),('Emilia'),('Mateo'),('Isabella'),('Emilio'),('Victoria'),('Simón'),('Antonia')
+) AS fnombres(nombre) ON (gs % 50 + 1) = row_number() OVER ()
+JOIN (VALUES
+  ('Torres'),('Pérez'),('Gómez'),('Rodríguez'),('Martínez'),('Ramírez'),('Herrera'),('Díaz'),('Castro'),('Peña'),
+  ('Ruiz'),('López'),('Vargas'),('Ríos'),('Suárez'),('Ramírez'),('Torres'),('Díaz'),('Gómez'),('Herrera'),
+  ('Peña'),('Castro'),('Ruiz'),('Gómez'),('Ramírez'),('Vargas'),('Ríos'),('Díaz'),('Torres'),('Ramírez'),
+  ('Herrera'),('Peña'),('Castro'),('Gómez'),('Vargas'),('Díaz'),('Torres'),('Ramírez'),('Herrera'),('Peña'),
+  ('Castro'),('Ruiz'),('Gómez'),('Ramírez'),('Vargas'),('Ríos'),('Díaz'),('Torres'),('Ramírez'),('Herrera')
+) AS fapellidos(apellido) ON (gs % 50 + 1) = row_number() OVER ()
+
+-- PROMOCIONES
+CREATE TABLE promociones (
+    id_promocion SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    tipo VARCHAR(20) NOT NULL, -- 'Descuento' o '2x1'
+    descuento NUMERIC(5,2),
+    fecha_inicio DATE,
+    fecha_fin DATE
+);
+
+-- PRODUCTO_PROMOCION
+CREATE TABLE producto_promocion (
+    id_promocion INT NOT NULL,
+    id_producto INT NOT NULL,
+    PRIMARY KEY (id_promocion, id_producto),
+    FOREIGN KEY (id_promocion) REFERENCES promociones(id_promocion),
+    FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
 );
 
 -- ===========================
@@ -281,18 +354,46 @@ INSERT INTO proveedores (nombre_empresa, ciudad, nit, representante_legal, email
 SELECT 'Proveedor ' || gs, 'Ciudad ' || gs, 'NIT' || gs, 'Representante ' || gs, 'proveedor' || gs || '@mail.com'
 FROM generate_series(1, 50) AS gs;
 
--- Insertar 1000 productos
+
+
+-- Nueva generación de 10,000 productos realistas y sin NULLs
+WITH nombres AS (
+  SELECT unnest(ARRAY[
+    'Leche Entera','Arroz Diana 1kg','Pan Tajado','Limpia Pisos Floral','Jabón de Manos','Gaseosa Cola 1.5L','Yogurt Fresa','Queso Campesino','Huevos AA x30','Detergente Ropa','Shampoo','Manzanas Rojas','Papas Criollas','Carne de Res','Pollo Entero','Cerveza Rubia','Galletas Festival','Papel Higiénico','Desodorante','Coca-Cola 250ml','Coca-Cola 600ml','Coca-Cola 3L','Esponja Multiusos','Cepillo de Dientes Adulto','Condones x3','Jabón Lavaplatos','Desinfectante','Toalla de Cocina','Papel Aluminio','Arroz Roa 500g','Pan Baguette','Pan Integral','Galletas Saltín','Salsa de Tomate','Mayonesa','Aceite de Girasol','Frijoles Empacados','Lentejas','Azúcar 1kg','Sal 500g','Cereal Chocapic','Cereal Zucaritas','Mermelada de Fresa','Mantequilla','Yogurt Natural','Galletas Ducales','Galletas Oreo','Maní Salado 100g','Aguardiente Antioqueño 375ml','Ron Medellín 375ml','Galletas Tosh Avena','Galletas Festival Vainilla','Ron Blanco 375ml','Pasta Dental 90g','Enjuague Bucal 250ml','Crema para Peinar','Toallas Húmedas','Pañales x30','Leche en Polvo 400g','Mantequilla de Maní','Cereal Fitness','Cereal Corn Flakes','Galletas Saltín Queso','Galletas Festival Limón','Maní Natural 100g','Galletas Tosh Chía','Galletas Festival Fresa','Galletas Festival Coco','Galletas Festival Mora','Galletas Festival Naranja','Galletas Festival Chocolate Blanco','Gaseosa Colombiana 1.5L','Gaseosa Manzana 1.5L','Gaseosa Uva 1.5L','Gaseosa Pepsi 1.5L','Café Sello Rojo 250g','Café Águila Roja 250g','Café Juan Valdez 250g','Café La Bastilla 250g','Salchicha Ranchera x10','Salchicha Zenú x10','Salchicha Pietrán x10','Papas Margarita Natural 30g','Papas Margarita Limón 30g','Papas Margarita BBQ 30g','Papas Margarita Pollo 30g','Papas Margarita Limón 105g','Papas Margarita Natural 105g'
+  ]) AS nombre, generate_series(1,90) AS idx
+), marcas AS (
+  SELECT unnest(ARRAY[
+    'Alpina','Diana','Bimbo','Limpio Hogar','Protex','Coca-Cola','Colanta','Kikes','Ariel','Head & Shoulders','Frutas del Campo','Verduras Verdes','Carnes Selectas','Aguila','Noel','Familia','Rexona','Postobón','Pepsi','Colgate','Durex','Axion','Reynolds','Roa','Panadería El Trigo','Fruco','Premier','Zenú','Incauca','Refisal','Nestlé','Kellogg''s','Bavaria','Ramo','Tosh','Nectar','Caldas','Maggi','Van Camp''s','Nescafé','Hatsu','Hit','Suavel','Ranchera','Pietrán','Margarita','Jif','Juan Valdez','Pampers','Nido','Victoria'
+  ]) AS marca, generate_series(1,51) AS idx
+), presentaciones AS (
+  SELECT unnest(ARRAY['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10']) AS presentacion, generate_series(1,10) AS idx
+), categorias AS (
+  SELECT id_categoria FROM categoria
+), proveedores AS (
+  SELECT id_proveedor FROM proveedores
+), tiendas AS (
+  SELECT id_tienda FROM tienda
+), combinaciones AS (
+  SELECT row_number() OVER () AS rn, n.nombre, m.marca, p.presentacion, c.id_categoria, pr.id_proveedor, t.id_tienda
+  FROM nombres n
+  CROSS JOIN marcas m
+  CROSS JOIN presentaciones p
+  CROSS JOIN categorias c
+  CROSS JOIN proveedores pr
+  CROSS JOIN tiendas t
+  LIMIT 10000
+)
 INSERT INTO productos (nombre, precio_unitario, precio_compra, stock, marca, id_categoria, id_proveedor, id_tienda)
 SELECT
-  'Producto ' || gs,
-  (random() * 100 + 1)::numeric(10,2),
-  (random() * 50 + 1)::numeric(10,2),
-  (random() * 100)::int,
-  'Marca ' || (gs % 10 + 1),
-  (gs % 10 + 1),
-  (gs % 50 + 1),
-  (gs % 10 + 1)
-FROM generate_series(1, 1000) AS gs;
+  nombre || ' ' || presentacion,
+  (1000 + (random() * 9000))::numeric(10,2),
+  (500 + (random() * 4000))::numeric(10,2),
+  (10 + (random() * 190)::int),
+  marca,
+  id_categoria,
+  id_proveedor,
+  id_tienda
+FROM combinaciones;
 
 -- Insertar 1000 ventas
 INSERT INTO ventas (cc_cliente, fecha_transaccion, monto_total)
