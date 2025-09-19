@@ -30,13 +30,6 @@ CREATE TABLE empleados (
     FOREIGN KEY (id_tienda) REFERENCES tienda(id_tienda)
 );
 
--- CLIENTES
-CREATE TABLE clientes (
-    cc_cliente VARCHAR(20) PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    correo VARCHAR(100) UNIQUE
-);
-
 -- CATEGORIA
 CREATE TABLE categoria (
     id_categoria SERIAL PRIMARY KEY,
