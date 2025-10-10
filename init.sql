@@ -170,28 +170,29 @@ FROM generate_series(1, 50) AS gs;
 
 
 
--- Generar 10,000 productos con distribución equilibrada
+-- Generar 10,000 productos simplificados sin caracteres especiales
 INSERT INTO productos (nombre, precio_unitario, precio_compra, stock, marca, id_categoria, id_proveedor, id_tienda)
 SELECT 
-  nombres[((gs-1) % array_length(nombres, 1)) + 1] || ' ' || presentaciones[((gs-1) % array_length(presentaciones, 1)) + 1],
+  'Producto ' || gs,
   (1000 + (random() * 9000))::numeric(10,2),
   (500 + (random() * 4000))::numeric(10,2),
   (10 + (random() * 190)::int),
-  marcas[((gs-1) % array_length(marcas, 1)) + 1],
-  categorias[((gs-1) % array_length(categorias, 1)) + 1],
-  proveedores[((gs-1) % array_length(proveedores, 1)) + 1],
-  tiendas[((gs-1) % array_length(tiendas, 1)) + 1]
-FROM generate_series(1, 10000) AS gs,
-LATERAL (SELECT ARRAY[
-  'Leche Entera','Arroz Diana 1kg','Pan Tajado','Limpia Pisos Floral','Jabón de Manos','Gaseosa Cola 1.5L','Yogurt Fresa','Queso Campesino','Huevos AA x30','Detergente Ropa','Shampoo','Manzanas Rojas','Papas Criollas','Carne de Res','Pollo Entero','Cerveza Rubia','Galletas Festival','Papel Higiénico','Desodorante','Coca-Cola 250ml','Coca-Cola 600ml','Coca-Cola 3L','Esponja Multiusos','Cepillo de Dientes Adulto','Condones x3','Jabón Lavaplatos','Desinfectante','Toalla de Cocina','Papel Aluminio','Arroz Roa 500g','Pan Baguette','Pan Integral','Galletas Saltín','Salsa de Tomate','Mayonesa','Aceite de Girasol','Frijoles Empacados','Lentejas','Azúcar 1kg','Sal 500g','Cereal Chocapic','Cereal Zucaritas','Mermelada de Fresa','Mantequilla','Yogurt Natural','Galletas Ducales','Galletas Oreo','Maní Salado 100g','Aguardiente Antioqueño 375ml','Ron Medellín 375ml','Galletas Tosh Avena','Galletas Festival Vainilla','Ron Blanco 375ml','Pasta Dental 90g','Enjuague Bucal 250ml','Crema para Peinar','Toallas Húmedas','Pañales x30','Leche en Polvo 400g','Mantequilla de Maní','Cereal Fitness','Cereal Corn Flakes','Galletas Saltín Queso','Galletas Festival Limón','Maní Natural 100g','Galletas Tosh Chía','Galletas Festival Fresa','Galletas Festival Coco','Galletas Festival Mora','Galletas Festival Naranja','Galletas Festival Chocolate Blanco','Gaseosa Colombiana 1.5L','Gaseosa Manzana 1.5L','Gaseosa Uva 1.5L','Gaseosa Pepsi 1.5L','Café Sello Rojo 250g','Café Águila Roja 250g','Café Juan Valdez 250g','Café La Bastilla 250g','Salchicha Ranchera x10','Salchicha Zenú x10','Salchicha Pietrán x10','Papas Margarita Natural 30g','Papas Margarita Limón 30g','Papas Margarita BBQ 30g','Papas Margarita Pollo 30g','Papas Margarita Limón 105g','Papas Margarita Natural 105g'
-] AS nombres) n,
-LATERAL (SELECT ARRAY[
-  'Alpina','Diana','Bimbo','Limpio Hogar','Protex','Coca-Cola','Colanta','Kikes','Ariel','Head & Shoulders','Frutas del Campo','Verduras Verdes','Carnes Selectas','Aguila','Noel','Familia','Rexona','Postobón','Pepsi','Colgate','Durex','Axion','Reynolds','Roa','Panadería El Trigo','Fruco','Premier','Zenú','Incauca','Refisal','Nestlé','Kellogg''s','Bavaria','Ramo','Tosh','Nectar','Caldas','Maggi','Van Camp''s','Nescafé','Hatsu','Hit','Suavel','Ranchera','Pietrán','Margarita','Jif','Juan Valdez','Pampers','Nido','Victoria'
-] AS marcas) m,
-LATERAL (SELECT ARRAY['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10'] AS presentaciones) p,
-LATERAL (SELECT ARRAY(SELECT id_categoria FROM categoria) AS categorias) c,
-LATERAL (SELECT ARRAY(SELECT id_proveedor FROM proveedores) AS proveedores) pr,
-LATERAL (SELECT ARRAY(SELECT id_tienda FROM tienda) AS tiendas) t;
+  CASE (gs % 10)
+    WHEN 0 THEN 'Alpina'
+    WHEN 1 THEN 'Diana'
+    WHEN 2 THEN 'Bimbo'
+    WHEN 3 THEN 'Coca-Cola'
+    WHEN 4 THEN 'Colanta'
+    WHEN 5 THEN 'Noel'
+    WHEN 6 THEN 'Nestle'
+    WHEN 7 THEN 'Bavaria'
+    WHEN 8 THEN 'Ramo'
+    ELSE 'Zenú'
+  END,
+  ((gs % 10) + 1),
+  ((gs % 50) + 1),
+  ((gs % 100) + 1)
+FROM generate_series(1, 10000) AS gs;
 
 -- ===========================
 -- INSERTAR PROMOCIONES (2023-2024)
@@ -219,78 +220,82 @@ INSERT INTO promociones (nombre, tipo, descuento, fecha_inicio, fecha_fin) VALUE
   ('2x1 Cuidado Personal', '2x1', 0.00, '2024-09-01', '2024-09-15'),
   ('2x1 Snacks', '2x1', 0.00, '2024-10-01', '2024-10-15');
 
--- Asociar productos a promociones
+-- Asociar productos a promociones (cada promoción con 10-20 productos)
 INSERT INTO producto_promocion (id_promocion, id_producto) 
 SELECT p.id_promocion, pr.id_producto 
 FROM promociones p 
-CROSS JOIN (SELECT id_producto FROM productos ORDER BY random() LIMIT 200) pr;
+CROSS JOIN (SELECT id_producto FROM productos ORDER BY random() LIMIT 200) pr
+LIMIT 800;
 
 -- ===========================
--- GENERAR VENTAS REALISTAS (2023-2024)
+-- GENERAR VENTAS REALISTAS (2023-2024) - VERSION SIMPLIFICADA
 -- ===========================
 
+-- Primero eliminamos ventas existentes para evitar duplicados
+DELETE FROM detalle_venta;
+DELETE FROM ventas;
+
+-- Generar 15000 ventas con fechas entre septiembre 2023 y septiembre 2025
+INSERT INTO ventas (cc_cliente, fecha_transaccion, monto_total)
+SELECT 
+  c.cc_cliente,
+  '2023-09-01'::date + (random() * 730)::int,
+  0
+FROM (
+  SELECT cc_cliente, 
+         generate_series(1, 8) as serie -- Cada cliente puede tener hasta 8 ventas
+  FROM clientes
+) c
+WHERE (c.cc_cliente::int % 100) < 75 -- 75% de clientes tienen ventas
+LIMIT 15000;
+
+-- Generar detalles de venta con distribución realista
 DO $$
 DECLARE
-  v_id_venta INT;
-  v_cc_cliente VARCHAR(20);
-  v_fecha DATE;
-  v_monto_total NUMERIC(12,2);
-  v_cant_productos INT;
-  v_id_producto INT;
-  v_cantidad INT;
-  v_precio NUMERIC(10,2);
-  v_subtotal NUMERIC(12,2);
-  v_i INT;
-  v_j INT;
-  v_ids_clientes TEXT[];
-  v_ids_productos INT[];
+    venta RECORD;
+    num_productos INT;
+    i INT;
+    producto_id INT;
+    cantidad INT;
+    precio NUMERIC;
+    subtotal NUMERIC;
 BEGIN
-  -- Obtener arrays de clientes y productos existentes
-  SELECT ARRAY(SELECT cc_cliente FROM clientes LIMIT 2000) INTO v_ids_clientes;
-  SELECT ARRAY(SELECT id_producto FROM productos LIMIT 10000) INTO v_ids_productos;
-  
-  -- Generar 2000 ventas
-  FOR v_i IN 1..2000 LOOP
-    -- Seleccionar cliente aleatorio
-    v_cc_cliente := v_ids_clientes[1 + floor(random() * (array_length(v_ids_clientes, 1) - 1))];
-    
-    -- Fecha aleatoria entre 2023-01-01 y 2024-12-31
-    v_fecha := '2023-01-01'::date + (floor(random() * 730))::int;
-    
-    v_monto_total := 0;
-    
-    -- Insertar venta
-    INSERT INTO ventas (cc_cliente, fecha_transaccion, monto_total) 
-    VALUES (v_cc_cliente, v_fecha, 0) 
-    RETURNING id_venta INTO v_id_venta;
-    
-    -- Entre 1 y 5 productos por venta
-    v_cant_productos := 1 + floor(random() * 5);
-    
-    FOR v_j IN 1..v_cant_productos LOOP
-      -- Seleccionar producto aleatorio
-      v_id_producto := v_ids_productos[1 + floor(random() * (array_length(v_ids_productos, 1) - 1))];
-      
-      -- Obtener precio del producto
-      SELECT precio_unitario INTO v_precio FROM productos WHERE id_producto = v_id_producto;
-      
-      -- Cantidad entre 1 y 4
-      v_cantidad := 1 + floor(random() * 4);
-      
-      -- Calcular subtotal
-      v_subtotal := v_precio * v_cantidad;
-      
-      -- Insertar detalle de venta
-      INSERT INTO detalle_venta (id_venta, id_producto, cantidad, subtotal_producto)
-      VALUES (v_id_venta, v_id_producto, v_cantidad, v_subtotal);
-      
-      v_monto_total := v_monto_total + v_subtotal;
+    FOR venta IN SELECT id_venta FROM ventas ORDER BY id_venta LOOP
+        -- Determinar número de productos por venta con distribución realista
+        CASE 
+            WHEN random() < 0.3 THEN num_productos := 1 + floor(random() * 2)::int; -- 30% compras pequeñas (1-2 productos)
+            WHEN random() < 0.7 THEN num_productos := 2 + floor(random() * 3)::int; -- 40% compras medianas (2-4 productos)
+            ELSE num_productos := 4 + floor(random() * 5)::int; -- 30% compras grandes (4-8 productos)
+        END CASE;
+        
+        -- Insertar productos para esta venta
+        FOR i IN 1..num_productos LOOP
+            -- Seleccionar producto aleatorio
+            SELECT id_producto, precio_unitario INTO producto_id, precio
+            FROM productos 
+            ORDER BY random() 
+            LIMIT 1;
+            
+            -- Cantidad entre 1 y 3
+            cantidad := 1 + floor(random() * 3)::int;
+            
+            -- Calcular subtotal
+            subtotal := precio * cantidad;
+            
+            -- Insertar detalle
+            INSERT INTO detalle_venta (id_venta, id_producto, cantidad, subtotal_producto)
+            VALUES (venta.id_venta, producto_id, cantidad, subtotal);
+        END LOOP;
     END LOOP;
-    
-    -- Actualizar monto total de la venta
-    UPDATE ventas SET monto_total = v_monto_total WHERE id_venta = v_id_venta;
-  END LOOP;
-END$$;
+END $$;
+
+-- Actualizar montos totales de las ventas
+UPDATE ventas 
+SET monto_total = (
+  SELECT COALESCE(SUM(subtotal_producto), 0)
+  FROM detalle_venta 
+  WHERE detalle_venta.id_venta = ventas.id_venta
+);
 
 -- ===========================
 -- DATOS CONSISTENTES DE EJEMPLO
@@ -317,3 +322,14 @@ INSERT INTO telefono_tienda (id_tienda, telefono) VALUES
   (8, '3178901234'),
   (9, '3189012345'),
   (10, '3190123456');
+
+-- Insertar teléfonos para todas las tiendas restantes
+INSERT INTO telefono_tienda (id_tienda, telefono) 
+SELECT id_tienda, '320' || LPAD((2000000 + id_tienda)::text, 7, '0') 
+FROM tienda 
+WHERE id_tienda NOT IN (SELECT id_tienda FROM telefono_tienda);
+
+-- Insertar teléfonos para todos los proveedores
+INSERT INTO telefono_proveedor (id_proveedor, telefono)
+SELECT id_proveedor, '310' || LPAD((1000000 + id_proveedor)::text, 7, '0')
+FROM proveedores;
