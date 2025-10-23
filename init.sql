@@ -243,10 +243,10 @@ SELECT
   0
 FROM (
   SELECT cc_cliente, 
-         generate_series(1, 8) as serie -- Cada cliente puede tener hasta 8 ventas
+         generate_series(1, 10) as serie -- Cada cliente puede tener hasta 10 ventas
   FROM clientes
 ) c
-WHERE (c.cc_cliente::int % 100) < 75 -- 75% de clientes tienen ventas
+WHERE (c.cc_cliente::int % 100) < 80 -- 80% de clientes tienen ventas
 LIMIT 15000;
 
 -- Generar detalles de venta con distribución realista
